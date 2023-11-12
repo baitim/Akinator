@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "ANSI_colors.h"
 #include "Tree.h"
@@ -20,11 +21,15 @@ int main()
 
     Tree *tree = nullptr;
 
-    srand((int)time(NULL));
-    for (int i = 0; i < 80; i++) {
-        int value = rand() % 1000 + 1;
-        printf("i = %d\tx = %d\n", i, value);
-        err = tree_insert(&tree, value);
+    char object[MAX_SIZE_DATA] = "";
+    for (int i = 0; i < 5; i++) {
+        printf(print_lcyan("Input name of object:\n"));
+        int read_count = scanf("%s", object);
+        if (read_count != 1) {
+            printf("Cannot read input\n");
+            continue;
+        }
+        err = tree_insert(&tree, object);
         if (err) {
             err_dump(err);
             return err;
