@@ -14,6 +14,8 @@ struct Tree {
 };
 
 Type_Error tree_new         (Tree **tree, char *str);
+Type_Error tree_read        (Tree **tree, FILE *data_file);
+Type_Error tree_write       (Tree **tree, FILE *data_file);
 Type_Error tree_delete      (Tree *tree);
 Type_Error tree_cmd_dump    (Tree *tree);
 Type_Error tree_graph_dump  (Tree *tree, FILE *dump_file);

@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "ANSI_colors.h"
 #include "Tree.h"
@@ -9,6 +10,8 @@
 static Type_Error tree_cmd_dump_(Tree *tree, int dep);
 static Type_Error tree_graph_dump_make_node(Tree *tree, FILE *dump_file, int dep);
 static Type_Error tree_graph_dump_make_edge(Tree *tree, FILE *dump_file);
+static void get_input_word(char *str, FILE *data_file);
+static Type_Error tree_init(Tree **tree);
 
 Type_Error tree_new(Tree **tree, char *str)
 {
@@ -151,10 +154,12 @@ static Type_Error tree_graph_dump_make_edge(Tree *tree, FILE *dump_file)
         tree_graph_dump_make_edge(tree->left, dump_file);
 
     if (tree->left) 
-        fprintf(dump_file, "\tnode%p->node%p[color = yellow, labelangle = 45];\n", tree, tree->left);
+        fprintf(dump_file, "\tnode%p->node%p[color = yellow, labelangle = 45];\n",
+                            tree, tree->left);
 
     if (tree->right) 
-        fprintf(dump_file, "\tnode%p->node%p[color = yellow, labelangle = 45];\n", tree, tree->right);
+        fprintf(dump_file, "\tnode%p->node%p[color = yellow, labelangle = 45];\n",
+                            tree, tree->right);
 
     if (tree->right)
         tree_graph_dump_make_edge(tree->right, dump_file);
@@ -178,55 +183,140 @@ Type_Error tree_verify(Tree *tree)
     return ERROR_NO;
 }
 
+Type_Error tree_read(Tree **tree, FILE *data_file)
+{
+    assert(data_file);
+
+    Type_Error err = ERROR_NO;
+    int c = 0;
+    if ((c = getc(data_file)) == '(') {
+        tree_init(tree);
+    
+        get_input_word((*tree)->data, data_file);
+
+        c = getc(data_file);
+        err = tree_read(&(*tree)->left, data_file);
+        if (err) return err;
+
+        err = tree_read(&(*tree)->right, data_file);
+        if (err) return err;
+        c = getc(data_file);
+
+        return tree_verify(*tree);
+    } else {
+        char nill[MAX_SIZE_DATA] = "";
+        get_input_word(nill, data_file);
+        c = getc(data_file);
+        
+        return ERROR_NO;
+    }
+
+    return ERROR_NO;
+}
+
+Type_Error tree_write(Tree **tree, FILE *data_file)
+{
+    assert(data_file);
+    if (!*tree)
+        return ERROR_INVALID_TREE;
+
+    fprintf(data_file, "(");
+
+    fprintf(data_file, "<%s> ", (*tree)->data);
+
+    if ((*tree)->left)  tree_write(&(*tree)->left, data_file);
+    else                fprintf(data_file, "<nill>");
+
+    fprintf(data_file, " ");
+
+    if ((*tree)->left)  tree_write(&(*tree)->right, data_file);
+    else                fprintf(data_file, "<nill>");
+
+    fprintf(data_file, ")");
+
+    return tree_verify(*tree);
+}
+
+static void get_input_word(char *str, FILE *data_file)
+{
+    int c = 0;
+
+    if ((c = getc(data_file)) != '<')
+        ungetc(c, data_file);
+
+    int i = 0;
+    while (i < MAX_SIZE_DATA - 1 && (c = getc(data_file)) != '>') {
+        str[i] = (char)c;
+        i++;
+    }
+    str[i + 1] = '\0';
+}
+
+static Type_Error tree_init(Tree **tree)
+{
+    *tree = (Tree *)malloc(sizeof(Tree));
+    if (!*tree)
+        return ERROR_ALLOC_FAIL;
+
+    **tree = (Tree){nullptr, nullptr, nullptr};
+
+    (*tree)->data = (char *)calloc(MAX_SIZE_DATA, sizeof(char));
+    if (!(*tree)->data)
+        return ERROR_ALLOC_FAIL;
+
+    return ERROR_NO;
+}
+
 Type_Error tree_insert(Tree **tree, char *str)
 {
+    Type_Error err = ERROR_NO;
     if (!*tree) {
-        *tree = (Tree *)malloc(sizeof(Tree));
-        if (!*tree)
-            return ERROR_ALLOC_FAIL;
-
-        **tree = (Tree){nullptr, nullptr, nullptr};
-
-        (*tree)->data = (char *)calloc(MAX_SIZE_DATA, sizeof(char));
-        if (!(*tree)->data)
-            return ERROR_ALLOC_FAIL;
+        err = tree_init(tree);
+        if (err) return err;
 
         strcpy((*tree)->data, str);
 
         return ERROR_NO;
     }
 
-    Type_Error err = tree_verify(*tree);
+    err = tree_verify(*tree);
     if (err) return err;
 
-    char answer[MAX_SIZE_DATA] = "";
+    char *difference = nullptr;
     int read_count = 0;
+    size_t len_str = 1;
 
     if (!(*tree)->left && !(*tree)->right) {
         printf("What is difference between %s and %s?\n", (*tree)->data, str);
-        read_count = scanf("%s", answer);
-        if (read_count != 1)
+        read_count = (int)getline(&difference, &len_str, stdin);
+        difference[read_count - 1] = '\0';
+        if (read_count == -1)
             return ERROR_READ_INPUT;
 
         tree_insert(&(*tree)->left, (*tree)->data);
         tree_insert(&(*tree)->right, str);
-        strcpy((*tree)->data, answer);
+        strcpy((*tree)->data, difference);
+
+        free(difference);
 
         return tree_verify(*tree);
     }
 
+    char *question = nullptr;
     printf(print_lcyan("Is %s?\n"), (*tree)->data);
-    read_count = scanf("%s", answer);
-    if (read_count != 1)
+    read_count = (int)getline(&question, &len_str, stdin);
+    question[read_count - 1] = '\0';
+    if (read_count == -1)
         return ERROR_READ_INPUT;
 
-    if (strncmp(answer, "yes", 3) == 0 || strncmp(answer, "да", 3) == 0) { 
+    if (strncmp(question, "yes", 3) == 0 || strncmp(question, "да", 3) == 0) { 
         tree_insert(&(*tree)->left, str);
-    } else if (strncmp(answer, "no", 2) == 0  || strncmp(answer, "нет", 3) == 0) {
+    } else if (strncmp(question, "no", 2) == 0  || strncmp(question, "нет", 3) == 0) {
         tree_insert(&(*tree)->right, str);
     } else {
         return ERROR_READ_INPUT;
     }
+    free(question);
 
     return tree_verify(*tree);
 }

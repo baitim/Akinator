@@ -15,6 +15,7 @@ enum Type_Error {
     ERROR_INVALID_TREE =                1 << 4,
     ERROR_EMPTY_NODE =                  1 << 5,
     ERROR_READ_INPUT =                  1 << 6,
+    ERROR_READ_FILE =                   1 << 7,
 };
 
 const Error ERRORS[] = {
@@ -26,6 +27,7 @@ const Error ERRORS[] = {
     {ERROR_INVALID_TREE,                "invalid pointer to tree"},
     {ERROR_EMPTY_NODE,                  "invalid node in tree"},
     {ERROR_READ_INPUT,                  "invalid input argument"},
+    {ERROR_READ_FILE,                   "invalid data file"},
 };
 const int COUNT_ERRORS = sizeof(ERRORS) / sizeof(Error);
 
