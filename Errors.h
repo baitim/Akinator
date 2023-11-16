@@ -6,7 +6,7 @@ struct Error {
     const char *description;
 };
 
-enum Type_Error {
+enum TypeError {
     ERROR_NO =                          0,
     ERROR_ALLOC_FAIL =                  1 << 0,
     ERROR_MEMCPY_FAIL =                 1 << 1,
@@ -16,6 +16,8 @@ enum Type_Error {
     ERROR_EMPTY_NODE =                  1 << 5,
     ERROR_READ_INPUT =                  1 << 6,
     ERROR_READ_FILE =                   1 << 7,
+    ERROR_OPEN_FILE =                   1 << 8,
+    ERROR_INVALID_INPUT =               1 << 9,
 };
 
 const Error ERRORS[] = {
@@ -28,6 +30,8 @@ const Error ERRORS[] = {
     {ERROR_EMPTY_NODE,                  "invalid node in tree"},
     {ERROR_READ_INPUT,                  "invalid input argument"},
     {ERROR_READ_FILE,                   "invalid data file"},
+    {ERROR_OPEN_FILE,                   "invalid name of file"},
+    {ERROR_INVALID_INPUT,               "invalid input"},
 };
 const int COUNT_ERRORS = sizeof(ERRORS) / sizeof(Error);
 

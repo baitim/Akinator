@@ -7,13 +7,13 @@
 #include "ANSI_colors.h"
 #include "Tree.h"
 
-static Type_Error tree_cmd_dump_(Tree *tree, int dep);
-static Type_Error tree_graph_dump_make_node(Tree *tree, FILE *dump_file, int dep);
-static Type_Error tree_graph_dump_make_edge(Tree *tree, FILE *dump_file);
+static TypeError tree_cmd_dump_(Tree *tree, int dep);
+static TypeError tree_graph_dump_make_node(Tree *tree, FILE *dump_file, int dep);
+static TypeError tree_graph_dump_make_edge(Tree *tree, FILE *dump_file);
 static void get_input_word(char *str, FILE *data_file);
-static Type_Error tree_init(Tree **tree);
+static TypeError tree_init(Tree **tree);
 
-Type_Error tree_new(Tree **tree, char *str)
+TypeError tree_new(Tree **tree, char *str)
 {
     if (!tree)
         return ERROR_INVALID_TREE;
@@ -23,12 +23,12 @@ Type_Error tree_new(Tree **tree, char *str)
     return tree_verify((*tree));
 }
 
-Type_Error tree_delete(Tree *tree)
+TypeError tree_delete(Tree *tree)
 {
     if (!tree)
         return ERROR_INVALID_TREE;
 
-    Type_Error err = tree_verify(tree);
+    TypeError err = tree_verify(tree);
     if (err) return err;
 
     if (tree->left)
@@ -42,12 +42,12 @@ Type_Error tree_delete(Tree *tree)
     return ERROR_NO;
 }
 
-Type_Error tree_cmd_dump(Tree *tree)
+TypeError tree_cmd_dump(Tree *tree)
 {
     if (!tree)
         return ERROR_INVALID_TREE;
 
-    Type_Error err = tree_verify(tree);
+    TypeError err = tree_verify(tree);
     if (err) return err;
 
     printf(print_lgreen("^^^^^^^^^^^^^^^^^^^^\n\n"));
@@ -60,12 +60,12 @@ Type_Error tree_cmd_dump(Tree *tree)
     return tree_verify(tree);
 }
 
-static Type_Error tree_cmd_dump_(Tree *tree, int dep)
+static TypeError tree_cmd_dump_(Tree *tree, int dep)
 {
     if (!tree)
         return ERROR_INVALID_TREE;
 
-    Type_Error err = tree_verify(tree);
+    TypeError err = tree_verify(tree);
     if (err) return err;
 
     if (tree->left)
@@ -80,7 +80,7 @@ static Type_Error tree_cmd_dump_(Tree *tree, int dep)
     return tree_verify(tree);
 }
 
-Type_Error tree_graph_dump(Tree *tree, FILE *dump_file)
+TypeError tree_graph_dump(Tree *tree, FILE *dump_file)
 {
     if (!tree)
         return ERROR_INVALID_TREE;
@@ -88,7 +88,7 @@ Type_Error tree_graph_dump(Tree *tree, FILE *dump_file)
     if (!dump_file)
         return ERROR_INVALID_FILE;
 
-    Type_Error err = tree_verify(tree);
+    TypeError err = tree_verify(tree);
     if (err) return err;
 
     fprintf(dump_file, "digraph {\n");
@@ -112,12 +112,12 @@ Type_Error tree_graph_dump(Tree *tree, FILE *dump_file)
     return tree_verify(tree);
 }
 
-static Type_Error tree_graph_dump_make_node(Tree *tree, FILE *dump_file, int dep)
+static TypeError tree_graph_dump_make_node(Tree *tree, FILE *dump_file, int dep)
 {
     if (!tree)
         return ERROR_INVALID_TREE;
 
-    Type_Error err = tree_verify(tree);
+    TypeError err = tree_verify(tree);
     if (err) return err;
 
     if (tree->left)
@@ -142,12 +142,12 @@ static Type_Error tree_graph_dump_make_node(Tree *tree, FILE *dump_file, int dep
     return tree_verify(tree);
 }
 
-static Type_Error tree_graph_dump_make_edge(Tree *tree, FILE *dump_file)
+static TypeError tree_graph_dump_make_edge(Tree *tree, FILE *dump_file)
 {
     if (!tree)
         return ERROR_INVALID_TREE;
 
-    Type_Error err = tree_verify(tree);
+    TypeError err = tree_verify(tree);
     if (err) return err;
 
     if (tree->left)
@@ -167,7 +167,7 @@ static Type_Error tree_graph_dump_make_edge(Tree *tree, FILE *dump_file)
     return tree_verify(tree);
 }
 
-Type_Error tree_verify(Tree *tree)
+TypeError tree_verify(Tree *tree)
 {
     assert(tree);
 
@@ -183,38 +183,42 @@ Type_Error tree_verify(Tree *tree)
     return ERROR_NO;
 }
 
-Type_Error tree_read(Tree **tree, FILE *data_file)
+TypeError tree_read(Tree **tree, FILE *data_file)
 {
     assert(data_file);
 
-    Type_Error err = ERROR_NO;
-    int c = 0;
-    if ((c = getc(data_file)) == '(') {
+    int t = 0;
+    while (isspace(t = getc(data_file)))
+        ;
+
+    TypeError err = ERROR_NO;
+    if (t == '(') {
         tree_init(tree);
     
         get_input_word((*tree)->data, data_file);
+        t = getc(data_file);
 
-        c = getc(data_file);
         err = tree_read(&(*tree)->left, data_file);
         if (err) return err;
 
+        t = getc(data_file);
         err = tree_read(&(*tree)->right, data_file);
         if (err) return err;
-        c = getc(data_file);
+
+        while (isspace(t = getc(data_file)))
+            ;
 
         return tree_verify(*tree);
     } else {
         char nill[MAX_SIZE_DATA] = "";
-        get_input_word(nill, data_file);
-        c = getc(data_file);
-        
+        get_input_word(nill, data_file);   
         return ERROR_NO;
     }
 
     return ERROR_NO;
 }
 
-Type_Error tree_write(Tree **tree, FILE *data_file)
+TypeError tree_write(Tree **tree, FILE *data_file, int dep)
 {
     assert(data_file);
     if (!*tree)
@@ -224,26 +228,36 @@ Type_Error tree_write(Tree **tree, FILE *data_file)
 
     fprintf(data_file, "<%s> ", (*tree)->data);
 
-    if ((*tree)->left)  tree_write(&(*tree)->left, data_file);
+    if ((*tree)->left && (*tree)->right) {
+        fprintf(data_file, "\n");
+        for (int i = 0; i <= dep; i++) fprintf(data_file, "\t");
+    }
+
+    if ((*tree)->left)  tree_write(&(*tree)->left, data_file, dep + 1);
     else                fprintf(data_file, "<nill>");
 
-    fprintf(data_file, " ");
+    if ((*tree)->right) {
+        fprintf(data_file, "\n");
+        for (int i = 0; i <= dep; i++) fprintf(data_file, "\t");
+    } else {
+        fprintf(data_file, " ");
+    }
 
-    if ((*tree)->left)  tree_write(&(*tree)->right, data_file);
-    else                fprintf(data_file, "<nill>");
-
-    fprintf(data_file, ")");
+    if ((*tree)->left) {
+        tree_write(&(*tree)->right, data_file, dep + 1);
+        fprintf(data_file, "\n");
+        for (int i = 0; i < dep; i++) fprintf(data_file, "\t");
+        fprintf(data_file, ")");
+    } else {
+        fprintf(data_file, "<nill>)");
+    }
 
     return tree_verify(*tree);
 }
 
 static void get_input_word(char *str, FILE *data_file)
 {
-    int c = 0;
-
-    if ((c = getc(data_file)) != '<')
-        ungetc(c, data_file);
-
+    int c = getc(data_file);
     int i = 0;
     while (i < MAX_SIZE_DATA - 1 && (c = getc(data_file)) != '>') {
         str[i] = (char)c;
@@ -252,7 +266,7 @@ static void get_input_word(char *str, FILE *data_file)
     str[i + 1] = '\0';
 }
 
-static Type_Error tree_init(Tree **tree)
+static TypeError tree_init(Tree **tree)
 {
     *tree = (Tree *)malloc(sizeof(Tree));
     if (!*tree)
@@ -267,9 +281,9 @@ static Type_Error tree_init(Tree **tree)
     return ERROR_NO;
 }
 
-Type_Error tree_insert(Tree **tree, char *str)
+TypeError tree_insert(Tree **tree, char *str)
 {
-    Type_Error err = ERROR_NO;
+    TypeError err = ERROR_NO;
     if (!*tree) {
         err = tree_init(tree);
         if (err) return err;
