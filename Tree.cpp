@@ -13,7 +13,7 @@ static TypeError tree_graph_dump_make_node(Tree *tree, FILE *dump_file, int dep)
 static TypeError tree_graph_dump_make_edge(Tree *tree, FILE *dump_file);
 static void get_input_word(char *str, FILE *data_file);
 static TypeError tree_init(Tree **tree);
-static int tree_get_description(Tree *tree, Stack *stack, char *s);
+static TypeError tree_get_description(Tree *tree, Stack *stack, char *s, int *ans);
 static TypeError tree_print_description(Tree *tree, Stack *stack);
 
 
@@ -350,7 +350,16 @@ TypeError tree_description(Tree *tree)
     stk_err = stack_ctor(&stack);
     if (stk_err) return ERROR_STACK;
 
-    tree_get_description(tree, &stack, object);
+    int ans = -1;
+    tree_err = tree_get_description(tree, &stack, object, &ans);
+    if (tree_err) return tree_err;
+    if (ans == -1) {
+        printf(print_lyellow("Cannot find object\n"));
+        stack_dtor(&stack);
+        if (stk_err) return ERROR_STACK;
+        free(object);
+        return ERROR_NO;
+    }
 
     printf(print_lgreen("%s:\n"), object);
     tree_err = tree_print_description(tree, &stack);
@@ -364,26 +373,31 @@ TypeError tree_description(Tree *tree)
     return ERROR_NO;
 }
 
-static int tree_get_description(Tree *tree, Stack *stack, char *s)
+static TypeError tree_get_description(Tree *tree, Stack *stack, char *s, int *ans)
 {
     if (!tree) return ERROR_NO;
 
     if (!tree->left && !tree->right) {
-        if (strcmp(tree->data, s) == 0) return 1;
-        else                            return 0;
+        if (strcmp(tree->data, s) == 0) (*ans) = 1;
+        else                            (*ans) = 0;
+
+        return ERROR_NO;
     }
 
     int is_left = 0, is_right = 0;
-    if (tree->left)     is_left  = tree_get_description(tree->left, stack, s);
-    if (tree->right)    is_right = tree_get_description(tree->right, stack, s);
+    if (tree->left)     tree_get_description(tree->left, stack, s, &is_left);
+    if (tree->right)    tree_get_description(tree->right, stack, s, &is_right);
 
     int x = 0;
     if (is_left)    x = 1;
     if (is_right)   x = -1;
 
-    if (is_left || is_right) stack_push(stack, x);
+    if (is_left || is_right) {
+        stack_push(stack, x); 
+        (*ans) = 1; 
+    }
 
-    return x != 0;
+    return ERROR_NO;
 }
 
 static TypeError tree_print_description(Tree *tree, Stack *stack)
