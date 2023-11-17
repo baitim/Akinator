@@ -18,6 +18,7 @@ enum TypeError {
     ERROR_READ_FILE =                   1 << 7,
     ERROR_OPEN_FILE =                   1 << 8,
     ERROR_INVALID_INPUT =               1 << 9,
+    ERROR_STACK =                       1 << 10,
 };
 
 const Error ERRORS[] = {
@@ -32,6 +33,7 @@ const Error ERRORS[] = {
     {ERROR_READ_FILE,                   "invalid data file"},
     {ERROR_OPEN_FILE,                   "invalid name of file"},
     {ERROR_INVALID_INPUT,               "invalid input"},
+    {ERROR_STACK,                       "invalid stack"},
 };
 const int COUNT_ERRORS = sizeof(ERRORS) / sizeof(Error);
 

@@ -21,5 +21,6 @@ TypeError tree_cmd_dump    (Tree *tree);
 TypeError tree_graph_dump  (Tree *tree, FILE *dump_file);
 TypeError tree_verify      (Tree *tree);
 TypeError tree_insert      (Tree **tree, char *str);
+TypeError tree_description (Tree *tree);
 
 #endif // TREE_H
