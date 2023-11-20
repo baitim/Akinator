@@ -6,7 +6,7 @@ struct Error {
     const char *description;
 };
 
-enum TypeError {
+enum ErrorCode {
     ERROR_NO =                          0,
     ERROR_ALLOC_FAIL =                  1 << 0,
     ERROR_MEMCPY_FAIL =                 1 << 1,
@@ -19,7 +19,21 @@ enum TypeError {
     ERROR_OPEN_FILE =                   1 << 8,
     ERROR_INVALID_INPUT =               1 << 9,
     ERROR_STACK =                       1 << 10,
+    ERROR_SYSTEM_COMMAND =              1 << 11,
+    ERROR_EQUAL_OBJECTS =               1 << 12,
 };
+
+// enum AkErrorCode
+// {
+//     AK_ERROR_STACK,
+//     AK_ERROR_TREE,
+// };
+
+// struct AkError
+// {
+//     AkErrorCode code;
+//     const char* err_description;
+// };
 
 const Error ERRORS[] = {
     {ERROR_NO,                          "no errors"},
@@ -34,6 +48,7 @@ const Error ERRORS[] = {
     {ERROR_OPEN_FILE,                   "invalid name of file"},
     {ERROR_INVALID_INPUT,               "invalid input"},
     {ERROR_STACK,                       "invalid stack"},
+    {ERROR_SYSTEM_COMMAND,              "cannot process system command"},
 };
 const int COUNT_ERRORS = sizeof(ERRORS) / sizeof(Error);
 

@@ -52,6 +52,9 @@ const Errors STACK_ERRORS[] = {
     {STACK_ERROR_RIGHT_CANARY_DATA,           "stack->right_canary_data was changed"},
     {STACK_ERROR_ALLOC_FAIL,                  "realloc fail"},
 };
+
+// const char* stack_err2str(StackErrors err);
+
 const int COUNT_STACK_ERRORS = sizeof(STACK_ERRORS) / sizeof(Errors);
 
 StackErrors stack_ctor(Stack *stack);

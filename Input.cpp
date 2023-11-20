@@ -4,17 +4,18 @@
 #include "ANSI_colors.h"
 #include "Input.h"
 
-TypeError process_input(Tree *tree)
+ErrorCode process_input(Tree *tree)
 {
-    TypeError err = ERROR_NO;
+    ErrorCode err = ERROR_NO;
 
     while (true) {
-        int c;
+        int c = -1;
 
         printf(print_lcyan("Choose action:\n"
                            "\tG - guess object\n"
                            "\tP - print tree\n"
                            "\tD - print description of object\n"
+                           "\tC - compare two objects\n"
                            "\tE - exit\n"));
 
         c = getc(stdin);
@@ -39,6 +40,14 @@ TypeError process_input(Tree *tree)
 
             case 'D':
                 err = tree_description(tree);
+                if (err) {
+                    err_dump(err);
+                    return err;
+                }
+                break;
+
+            case 'C':
+                err = tree_compare(tree);
                 if (err) {
                     err_dump(err);
                     return err;

@@ -8,16 +8,25 @@
 #include "Tree.h"
 #include "Stack/Stack.h"
 
-static TypeError tree_cmd_dump_(Tree *tree, int dep);
-static TypeError tree_graph_dump_make_node(Tree *tree, FILE *dump_file, int dep);
-static TypeError tree_graph_dump_make_edge(Tree *tree, FILE *dump_file);
+const int MAX_SIZE_NAME_DUMP = 50;
+const int MAX_SIZE_COMMAND = 100;
+
+static ErrorCode tree_cmd_dump_(Tree *tree, int dep);
+static ErrorCode tree_graph_dump_make_node(Tree *tree, FILE *dump_file, int dep);
+static ErrorCode tree_graph_dump_make_edge(Tree *tree, FILE *dump_file);
 static void get_input_word(char *str, FILE *data_file);
-static TypeError tree_init(Tree **tree);
-static TypeError tree_get_description(Tree *tree, Stack *stack, char *s, int *ans);
-static TypeError tree_print_description(Tree *tree, Stack *stack);
+static ErrorCode tree_init(Tree **tree);
+static ErrorCode get_object(char **object);
+static ErrorCode tree_get_description(Tree *tree, Stack *stack, char *s, int *is_found);
+static ErrorCode tree_print_description(Tree *tree, Stack *stack);
+static ErrorCode tree_print_difference(Tree *tree, Stack *stack1, Stack *stack2);
 
+enum Branch {
+    BRANCH_LEFT =  -1,
+    BRANCH_RIGHT =  1,
+};
 
-TypeError tree_new(Tree **tree, char *str)
+ErrorCode tree_new(Tree **tree, char *str)
 {
     if (!tree && !*tree) return ERROR_INVALID_TREE;
 
@@ -26,11 +35,11 @@ TypeError tree_new(Tree **tree, char *str)
     return tree_verify((*tree));
 }
 
-TypeError tree_delete(Tree *tree)
+ErrorCode tree_delete(Tree *tree)
 {
     if (!tree) return ERROR_INVALID_TREE;
 
-    TypeError err = tree_verify(tree);
+    ErrorCode err = tree_verify(tree);
     if (err) return err;
 
     if (tree->left) return tree_delete(tree->left);
@@ -41,11 +50,11 @@ TypeError tree_delete(Tree *tree)
     return ERROR_NO;
 }
 
-TypeError tree_cmd_dump(Tree *tree)
+ErrorCode tree_cmd_dump(Tree *tree)
 {
     if (!tree) return ERROR_INVALID_TREE;
 
-    TypeError err = tree_verify(tree);
+    ErrorCode err = tree_verify(tree);
     if (err) return err;
 
     printf(print_magenta("^^^^^^^^^^^^^^^^^^^^\n\n"));
@@ -58,11 +67,11 @@ TypeError tree_cmd_dump(Tree *tree)
     return tree_verify(tree);
 }
 
-static TypeError tree_cmd_dump_(Tree *tree, int dep)
+static ErrorCode tree_cmd_dump_(Tree *tree, int dep)
 {
     if (!tree) return ERROR_INVALID_TREE;
 
-    TypeError err = tree_verify(tree);
+    ErrorCode err = tree_verify(tree);
     if (err) return err;
 
     if (tree->left) tree_cmd_dump_(tree->left, dep + 1);
@@ -76,21 +85,27 @@ static TypeError tree_cmd_dump_(Tree *tree, int dep)
     return tree_verify(tree);
 }
 
-TypeError tree_graph_dump(Tree *tree, FILE *dump_file)
+ErrorCode tree_graph_dump(Tree *tree, int *number_graph_dump)
 {
+    char buffer[MAX_SIZE_NAME_DUMP] = "";
+    snprintf(buffer, MAX_SIZE_NAME_DUMP, "dumps/dump%d", *number_graph_dump);
+
+    FILE *dump_file = fopen(buffer, "w");
+    if (!dump_file) {
+        printf("Error open file to dump\n");
+        return ERROR_SYSTEM_COMMAND;
+    }
+
     if (!tree)
         return ERROR_INVALID_TREE;
 
-    if (!dump_file)
-        return ERROR_INVALID_FILE;
-
-    TypeError err = tree_verify(tree);
+    ErrorCode err = tree_verify(tree);
     if (err) return err;
 
     fprintf(dump_file, "digraph {\n"
                        "\tgraph[label = \"Tree\", labelloc = top, "
                        "labeljust = center, fontsize = 70, fontcolor = \"#e33e19\"];\n"
-                       "\tgraph[dpi = 200];\n"
+                       "\tgraph[dpi = 100];\n"
                        "\tbgcolor = \"#2F353B\";\n"
                        "\tedge[minlen = 3, arrowsize = 1.5, penwidth = 3];\n"
                        "\tnode[shape = \"rectangle\", style = \"rounded, filled\", height = 3, width = 2, "
@@ -104,14 +119,46 @@ TypeError tree_graph_dump(Tree *tree, FILE *dump_file)
 
     fprintf(dump_file, "}\n");
 
+    fclose(dump_file);
+
+    char command[MAX_SIZE_COMMAND] = "";
+    snprintf(command, MAX_SIZE_COMMAND, "gvpack -u %s | dot -Tpng -o %s.png", buffer, buffer);
+    int sys = system(command);
+    if (sys) 
+        return ERROR_SYSTEM_COMMAND;
+
+    (*number_graph_dump)++;
     return tree_verify(tree);
 }
 
-static TypeError tree_graph_dump_make_node(Tree *tree, FILE *dump_file, int dep)
+ErrorCode tree_html_dump(int number_graph_dump)
+{
+    char buffer[MAX_SIZE_NAME_DUMP] = "";
+    snprintf(buffer, MAX_SIZE_NAME_DUMP, "dumps/dump.html");
+
+    FILE *html_file = fopen(buffer, "w");
+    if (!html_file) {
+        printf("Error open file to dump\n");
+        return ERROR_OPEN_FILE;
+    }
+
+    fprintf(html_file, "<pre>\n");
+
+    for (int i = 1; i <= number_graph_dump; i++) {
+        fprintf(html_file, "<img src = \"dump%d.png\">\n", i);
+    }
+
+    fprintf(html_file, "</pre>\n");
+
+    fclose(html_file);
+    return ERROR_NO;
+}
+
+static ErrorCode tree_graph_dump_make_node(Tree *tree, FILE *dump_file, int dep)
 {
     if (!tree) return ERROR_INVALID_TREE;
 
-    TypeError err = tree_verify(tree);
+    ErrorCode err = tree_verify(tree);
     if (err) return err;
 
     if (tree->left) tree_graph_dump_make_node(tree->left, dump_file, dep + 1);
@@ -134,11 +181,11 @@ static TypeError tree_graph_dump_make_node(Tree *tree, FILE *dump_file, int dep)
     return tree_verify(tree);
 }
 
-static TypeError tree_graph_dump_make_edge(Tree *tree, FILE *dump_file)
+static ErrorCode tree_graph_dump_make_edge(Tree *tree, FILE *dump_file)
 {
     if (!tree) return ERROR_INVALID_TREE;
 
-    TypeError err = tree_verify(tree);
+    ErrorCode err = tree_verify(tree);
     if (err) return err;
 
     if (tree->left)  tree_graph_dump_make_edge(tree->left, dump_file);
@@ -149,18 +196,18 @@ static TypeError tree_graph_dump_make_edge(Tree *tree, FILE *dump_file)
     return tree_verify(tree);
 }
 
-TypeError tree_verify(Tree *tree)
+ErrorCode tree_verify(Tree *tree)
 {
     assert(tree);
 
     if (!tree->data) return ERROR_EMPTY_NODE;
-    if (tree->left) return tree_verify(tree->left);
+    if (tree->left)  return tree_verify(tree->left);
     if (tree->right) return tree_verify(tree->right);
     
     return ERROR_NO;
 }
 
-TypeError tree_read(Tree **tree, FILE *data_file)
+ErrorCode tree_read(Tree **tree, FILE *data_file)
 {
     assert(data_file);
 
@@ -168,7 +215,7 @@ TypeError tree_read(Tree **tree, FILE *data_file)
     while (isspace(t = getc(data_file)))
         ;
 
-    TypeError err = ERROR_NO;
+    ErrorCode err = ERROR_NO;
     if (t == '(') {
         tree_init(tree);
     
@@ -195,7 +242,7 @@ TypeError tree_read(Tree **tree, FILE *data_file)
     return ERROR_NO;
 }
 
-TypeError tree_write(Tree **tree, FILE *data_file, int dep)
+ErrorCode tree_write(Tree **tree, FILE *data_file, int dep)
 {
     assert(data_file);
     if (!*tree) return ERROR_INVALID_TREE;
@@ -242,22 +289,20 @@ static void get_input_word(char *str, FILE *data_file)
     str[i + 1] = '\0';
 }
 
-static TypeError tree_init(Tree **tree)
+static ErrorCode tree_init(Tree **tree)
 {
-    *tree = (Tree *)malloc(sizeof(Tree));
+    *tree = (Tree *)calloc(1, sizeof(Tree));
     if (!*tree) return ERROR_ALLOC_FAIL;
 
-    **tree = (Tree){nullptr, nullptr, nullptr};
-
     (*tree)->data = (char *)calloc(MAX_SIZE_DATA, sizeof(char));
-    if (!(*tree)->data) return ERROR_ALLOC_FAIL;
+    if (!(*tree)->data) return ERROR_ALLOC_FAIL; 
 
     return ERROR_NO;
 }
 
-TypeError tree_insert(Tree **tree, char *str)
+ErrorCode tree_insert(Tree **tree, char *str)
 {
-    TypeError err = ERROR_NO;
+    ErrorCode err = ERROR_NO;
     if (!*tree) {
         err = tree_init(tree);
         if (err) return err;
@@ -326,23 +371,11 @@ TypeError tree_insert(Tree **tree, char *str)
     return tree_verify(*tree);
 }
 
-TypeError tree_description(Tree *tree)
+ErrorCode tree_description(Tree *tree)
 {
     assert(tree);
 
-    TypeError tree_err = ERROR_NO;
-
-    int read_count = 0;
-    size_t len_str = 0;
-    printf(print_lcyan("Input name of object:\n"));
-    char *object = nullptr;
-    read_count = (int)getline(&object, &len_str, stdin);
-    object[read_count - 1] = '\0';
-    if (read_count == -1) {
-        printf("Cannot read input\n");
-        free(object);
-        return ERROR_INVALID_INPUT;
-    }
+    ErrorCode tree_err = ERROR_NO;
 
     StackErrors stk_err = STACK_ERROR_NO;
     Stack stack = {};
@@ -350,14 +383,15 @@ TypeError tree_description(Tree *tree)
     stk_err = stack_ctor(&stack);
     if (stk_err) return ERROR_STACK;
 
-    int ans = -1;
-    tree_err = tree_get_description(tree, &stack, object, &ans);
+    char *object = nullptr;
+    tree_err = get_object(&object);
     if (tree_err) return tree_err;
-    if (ans == -1) {
+
+    int is_found = -1;
+    ErrorCode err = tree_get_description(tree, &stack, object, &is_found);
+    if (err) return err;
+    if (is_found == -1) {
         printf(print_lyellow("Cannot find object\n"));
-        stack_dtor(&stack);
-        if (stk_err) return ERROR_STACK;
-        free(object);
         return ERROR_NO;
     }
 
@@ -366,41 +400,56 @@ TypeError tree_description(Tree *tree)
     if (tree_err) return tree_err;
     printf("\n");
 
-    stack_dtor(&stack);
+    stk_err = stack_dtor(&stack);
     if (stk_err) return ERROR_STACK;
-
     free(object);
     return ERROR_NO;
 }
 
-static TypeError tree_get_description(Tree *tree, Stack *stack, char *s, int *ans)
+static ErrorCode get_object(char **object)
+{
+    int read_count = 0;
+    size_t len_str = 0;
+    printf(print_lcyan("Input name of object:\n"));
+    read_count = (int)getline(object, &len_str, stdin);
+    if (read_count == -1) {
+        printf("Cannot read input\n");
+        return ERROR_INVALID_INPUT;
+    }
+    (*object)[read_count - 1] = '\0';
+    return ERROR_NO;
+}
+
+static ErrorCode tree_get_description(Tree *tree, Stack *stack, char *s, int *is_found)
 {
     if (!tree) return ERROR_NO;
 
     if (!tree->left && !tree->right) {
-        if (strcmp(tree->data, s) == 0) (*ans) = 1;
-        else                            (*ans) = 0;
+        if (strcmp(tree->data, s) == 0) (*is_found) = 1;
+        else                            (*is_found) = 0;
 
         return ERROR_NO;
     }
 
     int is_left = 0, is_right = 0;
-    if (tree->left)     tree_get_description(tree->left, stack, s, &is_left);
-    if (tree->right)    tree_get_description(tree->right, stack, s, &is_right);
+    if (tree->left ) tree_get_description(tree->left,  stack, s, &is_left );
+    if (tree->right) tree_get_description(tree->right, stack, s, &is_right);
+    if (is_left && is_right)
+        return ERROR_EQUAL_OBJECTS;
 
     int x = 0;
-    if (is_left)    x = 1;
-    if (is_right)   x = -1;
+    if (is_left )   x = BRANCH_LEFT;
+    if (is_right)   x = BRANCH_RIGHT;
 
     if (is_left || is_right) {
         stack_push(stack, x); 
-        (*ans) = 1; 
+        (*is_found) = 1;
     }
 
     return ERROR_NO;
 }
 
-static TypeError tree_print_description(Tree *tree, Stack *stack)
+static ErrorCode tree_print_description(Tree *tree, Stack *stack)
 {
     if (!tree->left && !tree->right) return ERROR_NO;
 
@@ -410,13 +459,122 @@ static TypeError tree_print_description(Tree *tree, Stack *stack)
     stk_err = stack_pop(stack, &way);
     if (stk_err) return ERROR_STACK;
 
-    if (way == 1) {
+    if (way == BRANCH_LEFT) {
         printf(print_lyellow("%s\t"), tree->data);
         tree_print_description(tree->left, stack);
     } else {
+        assert(way == BRANCH_RIGHT);
         printf(print_lyellow("не %s\t"), tree->data);
         tree_print_description(tree->right, stack);
     }
+
+    return ERROR_NO;
+}
+
+ErrorCode tree_compare(Tree *tree)
+{
+    assert(tree);
+
+    ErrorCode err = ERROR_NO;
+    StackErrors stk_err = STACK_ERROR_NO;
+
+    Stack stack1 = {};
+    Stack stack2 = {};
+
+    stk_err = stack_ctor(&stack1);
+    if (stk_err) return ERROR_STACK;
+    stk_err = stack_ctor(&stack2);
+    if (stk_err) return ERROR_STACK;
+
+    char *object1 = nullptr;
+    err = get_object(&object1);
+    if (err) return err;
+    char *object2 = nullptr;
+    err = get_object(&object2);
+    if (err) return err;
+
+    int is_found = -1;
+    err = tree_get_description(tree, &stack1, object1, &is_found);
+    if (err) return err;
+    if (is_found == -1) {
+        printf(print_lyellow("Cannot find first object\n"));
+        return ERROR_NO;
+    }
+    is_found = -1;
+    err = tree_get_description(tree, &stack2, object2, &is_found);
+    if (err) return err;
+    if (is_found == -1) {
+        printf(print_lyellow("Cannot find second object\n"));
+        return ERROR_NO;
+    }
+
+    printf(print_lcyan("Compare ") print_lgreen("%s") print_lcyan(" and ") 
+           print_lgreen("%s") print_lcyan(":\n"), object1, object2);
+    err = tree_print_difference(tree, &stack1, &stack2);
+    if (err) return err;
+    printf("\n");
+
+    stk_err = stack_dtor(&stack1);
+    if (stk_err) return ERROR_STACK;
+    stk_err = stack_dtor(&stack2);
+    if (stk_err) return ERROR_STACK;
+    free(object1);
+    free(object2);
+    return ERROR_NO;
+}
+
+static ErrorCode tree_print_difference(Tree *tree, Stack *stack1, Stack *stack2)
+{
+    assert(tree);
+    assert(stack1);
+    assert(stack2);
+    ErrorCode err = ERROR_NO;
+    Tree *new_tree = tree;
+    int x1 = 0, x2 = 0;
+    printf(print_lcyan("Similarity between objects:\n"));
+    while (stack1->size > 0 && stack2->size > 0) {
+        stack_pop(stack1, &x1);
+        stack_pop(stack2, &x2);
+
+        if (x1 != x2) break;
+
+        if (x1 == BRANCH_LEFT) {
+            printf(print_lyellow("%s\t"), new_tree->data);
+            new_tree = new_tree->left;
+        } else {
+            printf(print_lyellow("не %s\t"), new_tree->data);
+            new_tree = new_tree->right;
+        }
+    }
+    printf("\n");
+
+    printf(print_lcyan("Difference between objects, first object:\n"));
+    Tree *tree1 = new_tree;
+    if (x1 == BRANCH_LEFT) {
+        printf(print_lyellow("%s\t"), new_tree->data);
+        tree1 = tree1->left;
+    }
+    if (x1 == BRANCH_RIGHT) {
+        printf(print_lyellow("не %s\t"), new_tree->data);
+        tree1 = tree1->right;
+    }
+    err = tree_print_description(tree1, stack1);
+    if (err) return err;
+    printf("\n");
+
+    printf(print_lcyan("Difference between objects, second object:\n"));
+    Tree *tree2 = new_tree;
+    if (x2 == BRANCH_LEFT) {
+        printf(print_lyellow("%s\t"), new_tree->data);
+        tree2 = tree2->left;
+    }
+    if (x2 == BRANCH_RIGHT) {
+        printf(print_lyellow("не %s\t"), new_tree->data);
+        tree2 = tree2->right;
+    }
+    err = tree_print_description(tree2, stack2);
+    if (err) return err;
+    printf("\n");
 
     return ERROR_NO;
 }

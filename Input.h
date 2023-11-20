@@ -4,6 +4,6 @@
 #include "Errors.h"
 #include "Tree.h"
 
-TypeError process_input(Tree *tree);
+ErrorCode process_input(Tree *tree);
 
 #endif // INPUT_H

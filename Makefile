@@ -3,13 +3,10 @@ OPTIONS = -O3 -Wshadow -Winit-self -Wredundant-decls -Wcast-align -Wundef -Wfloa
 TREE_FILES = $(wildcard *.cpp)
 STACK_FILES = $(wildcard Stack/*.cpp)
 
-build : tree run dump
+build : tree run
 
 tree : $(STACK_FILES) $(TREE_FILES)
 	g++ $(STACK_FILES) $(TREE_FILES) -o tree $(OPTIONS)
 
 run :
 	./tree
-
-dump :
-	gvpack -u dump.dot | dot -Tpng -o dump.png
