@@ -6,6 +6,7 @@
 #include "ANSI_colors.h"
 #include "Input.h"
 #include "Tree.h"
+#include "Output.h"
 
 int main()
 {
@@ -17,18 +18,11 @@ int main()
     Tree *tree = nullptr;
     const char name_data_file[] = "tree.txt";
 
-    FILE *data_file = fopen(name_data_file, "r");
-    if (!data_file) {
-        err = ERROR_OPEN_FILE;
-        err_dump(err);
-        return err;
-    }
-    err = tree_read(&tree, data_file);
+    err = tree_read(&tree, name_data_file);
     if (err) {
         err_dump(err);
         return err;
     }
-    fclose(data_file);
 
     process_input(tree);
 
@@ -38,7 +32,7 @@ int main()
         return err;
     }
 
-    data_file = fopen(name_data_file, "w");
+    FILE *data_file = fopen(name_data_file, "w");
     if (!data_file) {
         err = ERROR_OPEN_FILE;
         err_dump(err);
